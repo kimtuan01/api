@@ -17,6 +17,8 @@ import { UpdateLocationDto } from './dto/update-location.dto';
 import { UpdateTimezoneDto } from './dto/update-timezone.dto';
 import { ZodiacSign } from './entities/zodiac-sign.enum';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { EmailService } from '../email/email.service';
 
 interface RegisterUserDto {
   email: string;
@@ -29,6 +31,7 @@ export class UsersService {
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
     private readonly zodiacService: ZodiacService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -363,22 +366,26 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  // async updateResetToken(userId: string, resetToken: string, resetTokenExpires: Date) {
-  //   const user = await this.usersRepository.findOne({ where: { id: userId } });
-  //   if (!user) {
-  //     throw new NotFoundException('User not found');
-  //   }
+  async updateResetToken(
+    userId: string,
+    resetToken: string,
+    resetTokenExpires: Date,
+  ) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
-  //   user.resetToken = resetToken;
-  //   user.resetTokenExpires = resetTokenExpires;
-  //   return this.usersRepository.save(user);
-  // }
+    user.resetToken = resetToken;
+    user.resetTokenExpires = resetTokenExpires;
+    return this.usersRepository.save(user);
+  }
 
-  // async findByResetToken(token: string): Promise<User | null> {
-  //   return this.usersRepository.findOne({
-  //     where: { resetToken: token },
-  //   });
-  // }
+  async findByResetToken(token: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { resetToken: token },
+    });
+  }
 
   async updatePassword(userId: string, newPassword: string) {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
@@ -386,19 +393,71 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const hashedPassword = createHash('sha256').update(newPassword).digest('hex');
+    const hashedPassword = createHash('sha256')
+      .update(newPassword)
+      .digest('hex');
     user.password = hashedPassword;
     return this.usersRepository.save(user);
   }
 
-  // async clearResetToken(userId: string) {
-  //   const user = await this.usersRepository.findOne({ where: { id: userId } });
-  //   if (!user) {
-  //     throw new NotFoundException('User not found');
-  //   }
+  async clearResetToken(userId: string) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
-  //   user.resetToken = null;
-  //   user.resetTokenExpires = null;
-  //   return this.usersRepository.save(user);
-  // }
+    user.resetToken = null;
+    user.resetTokenExpires = null;
+    return this.usersRepository.save(user);
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.findOneByEmail(email);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Generate reset token
+    const resetToken = createHash('sha256')
+      .update(Math.random().toString())
+      .digest('hex');
+
+    // Set token expiration to 1 hour from now
+    const resetTokenExpires = new Date();
+    resetTokenExpires.setHours(resetTokenExpires.getHours() + 1);
+
+    // Save reset token to user
+    await this.updateResetToken(user.id, resetToken, resetTokenExpires);
+
+    // Send reset password email
+    await this.emailService.sendPasswordResetEmail(email, resetToken);
+
+    return {
+      message: 'Password reset email sent',
+    };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const { token, password, confirmPassword } = resetPasswordDto;
+
+    if (password !== confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const user = await this.findByResetToken(token);
+    if (!user) {
+      throw new BadRequestException('Invalid reset token');
+    }
+
+    if (user.resetTokenExpires < new Date()) {
+      throw new BadRequestException('Reset token has expired');
+    }
+
+    await this.updatePassword(user.id, password);
+    await this.clearResetToken(user.id);
+
+    return {
+      message: 'Password has been reset successfully',
+    };
+  }
 }
