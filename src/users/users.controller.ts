@@ -1,4 +1,12 @@
-import { Body, Controller, Put, Req, UseGuards, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Put,
+  Req,
+  UseGuards,
+  Post,
+  Patch,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -38,7 +46,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
-  @Put('password')
+  @Patch('password')
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDto,
     @Req() req,

@@ -1,12 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LLMService } from './llm.service';
-import { HoroscopeResponseDto } from '../horoscope/models/horoscope.dto';
+// import { HoroscopeResponseDto } from '../horoscope/models/horoscope.dto';
 // import { ZodiacSign } from '../users/entities/zodiac-sign.enum'; // Will be in GenerateHoroscopeParamsDto
 import { GenerateHoroscopeParamsDto } from './models/generate-horoscope-params.dto'; // Added import
 import {
   horoscopePromptTemplate,
   extractScoresPromptTemplate,
 } from './prompts/horoscope-prompt';
+// import { HoroscopeHistory } from 'src/horoscope/models/horoscope-history.entity';
 
 /**
  * Service for generating horoscope data using LLM
@@ -25,14 +26,13 @@ export class HoroscopeGeneratorService {
    */
   async generateHoroscope(
     params: GenerateHoroscopeParamsDto,
-  ): Promise<HoroscopeResponseDto> {
+  ): Promise<GeneratedHoroscopeContent> {
     this.logger.log(
       `Generating horoscope for zodiac sign: ${params.sign}, Date of Birth: ${params.dateOfBirth || 'N/A'}, Birth Time: ${params.birthTime || 'N/A'}`,
     );
     const date = new Date().toISOString().split('T')[0];
 
     try {
-      // Prepare prompt variables
       const promptVariables: Record<string, any> = {
         zodiacSign: params.sign,
         date,
@@ -44,26 +44,27 @@ export class HoroscopeGeneratorService {
         promptVariables.birthTime = params.birthTime;
       }
 
-      // Generate the raw horoscope text
+      // Tăng max_tokens để đảm bảo đủ độ dài cho tất cả các phần
       const horoscopeText = await this.llmService.generateText(
         horoscopePromptTemplate,
         promptVariables,
       );
 
-      // Split the text into sections (assumes newline separation)
-      const sections = horoscopeText.split('\n\n').filter(Boolean);
+      // Tách các phần và đảm bảo mỗi phần đều có nội dung
+      const sections = horoscopeText
+        .split('\n\n')
+        .filter(Boolean)
+        .map((section) => section.trim());
 
       if (sections.length < 5) {
         this.logger.warn(
           `Not enough sections in generated horoscope for ${params.sign}. Expected 5, got ${sections.length}`,
         );
-        // Ensure we have at least 5 sections, even if some are empty
         while (sections.length < 5) {
           sections.push('');
         }
       }
 
-      // Extract the scores using a separate prompt
       const scoresJson = await this.llmService.generateText(
         extractScoresPromptTemplate,
         { horoscopeText },
@@ -79,7 +80,31 @@ export class HoroscopeGeneratorService {
         scores = { health: 70, love: 70, career: 70 };
       }
 
-      // Create and return the DTO
+      // Hàm helper để xử lý text
+      const processText = (text: string) => {
+        if (!text) return 'No horoscope available.';
+        return text
+          .replace(/\\n/g, '\n') // Thay thế \n bằng xuống dòng thực sự
+          .replace(/^[^:]+:\n/, '') // Xóa phần tiêu đề và dấu xuống dòng sau nó
+          .trim(); // Xóa khoảng trắng thừa
+      };
+
+      // Kiểm tra và xử lý từng phần
+      const overview = processText(sections[0]);
+      const loveAndRelationships = processText(sections[1]);
+      const careerAndStudies = processText(sections[2]);
+      const healthAndWellbeing = processText(sections[3]);
+      const moneyAndFinances = processText(sections[4]);
+
+      // Log để debug
+      this.logger.debug('Generated sections:', {
+        overview: overview.length,
+        loveAndRelationships: loveAndRelationships.length,
+        careerAndStudies: careerAndStudies.length,
+        healthAndWellbeing: healthAndWellbeing.length,
+        moneyAndFinances: moneyAndFinances.length,
+      });
+
       return {
         sign: params.sign,
         date,
@@ -88,11 +113,11 @@ export class HoroscopeGeneratorService {
           love: scores.love || 70,
           career: scores.career || 70,
         },
-        overview: sections[0] || 'No overview available.',
-        loveAndRelationships: sections[1] || 'No love horoscope available.',
-        careerAndStudies: sections[2] || 'No career horoscope available.',
-        healthAndWellbeing: sections[3] || 'No health horoscope available.',
-        moneyAndFinances: sections[4] || 'No finance horoscope available.',
+        overview,
+        loveAndRelationships,
+        careerAndStudies,
+        healthAndWellbeing,
+        moneyAndFinances,
       };
     } catch (error) {
       this.logger.error(
@@ -102,4 +127,15 @@ export class HoroscopeGeneratorService {
       throw error;
     }
   }
+}
+
+export interface GeneratedHoroscopeContent {
+  sign: string;
+  date: string;
+  scores: { health: number; love: number; career: number };
+  overview: string;
+  loveAndRelationships: string;
+  careerAndStudies: string;
+  healthAndWellbeing: string;
+  moneyAndFinances: string;
 }

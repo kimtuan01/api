@@ -357,6 +357,13 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    if (changePasswordDto.password === user.password) {
+      throw new BadRequestException(
+        'New password cannot be the same as the old password',
+      );
+    }
+
     if (changePasswordDto.password !== changePasswordDto.confirmPassword) {
       throw new BadRequestException('Passwords do not match');
     }
