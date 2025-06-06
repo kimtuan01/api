@@ -44,7 +44,7 @@ export class HoroscopeGeneratorService {
         promptVariables.birthTime = params.birthTime;
       }
 
-      // Tăng max_tokens để đảm bảo đủ độ dài cho tất cả các phần
+      // Generate the raw horoscope text
       const horoscopeText = await this.llmService.generateText(
         horoscopePromptTemplate,
         promptVariables,
@@ -113,11 +113,15 @@ export class HoroscopeGeneratorService {
           love: scores.love || 70,
           career: scores.career || 70,
         },
-        overview,
-        loveAndRelationships,
-        careerAndStudies,
-        healthAndWellbeing,
-        moneyAndFinances,
+        overview: overview || 'No overview available.',
+        loveAndRelationships:
+          loveAndRelationships || 'No love and relationships available.',
+        careerAndStudies:
+          careerAndStudies || 'No career and studies available.',
+        healthAndWellbeing:
+          healthAndWellbeing || 'No health and wellbeing available.',
+        moneyAndFinances:
+          moneyAndFinances || 'No money and finances available.',
       };
     } catch (error) {
       this.logger.error(

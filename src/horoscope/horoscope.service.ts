@@ -61,8 +61,9 @@ export class HoroscopeService {
 
     const dateOfBirth = new Date(generateHoroscopeDto.dateOfBirth);
     const sign = this.zodiacService.calculateZodiacSign(dateOfBirth);
+    const today = new Date().toISOString().split('T')[0];
 
-    // Kiểm tra xem đã có horoscope cho ngày sinh này chưa
+    // Kiểm tra xem đã có user birth date chưa
     const existingBirthDate = await this.userBirthDateRepository.findOne({
       where: {
         userId: user.id,
@@ -70,37 +71,32 @@ export class HoroscopeService {
       },
     });
 
-    if (existingBirthDate) {
-      const existingHoroscope = await this.horoscopeHistoryRepository.findOne({
-        where: {
-          userId: user.id,
-          userBirthDateId: existingBirthDate.id,
-        },
-      });
-
-      if (existingHoroscope) {
-        this.logger.debug(
-          `Found existing horoscope for user ${user.id} with birth date: ${dateOfBirth.toISOString().split('T')[0]}`,
-        );
-        return existingHoroscope;
-      }
-    }
-
     // Tạo hoặc cập nhật user birth date
     const userBirthDate = existingBirthDate || new UserBirthDate();
     if (!existingBirthDate) {
       userBirthDate.userId = user.id;
+      userBirthDate.dateOfBirth = dateOfBirth;
+      userBirthDate.zodiacSign = sign;
+      await this.userBirthDateRepository.save(userBirthDate);
     }
 
-    userBirthDate.dateOfBirth = dateOfBirth;
-    userBirthDate.zodiacSign = sign;
-    await this.userBirthDateRepository.save(userBirthDate);
+    // Kiểm tra xem đã có horoscope cho ngày hôm nay chưa
+    const existingHoroscope = await this.horoscopeHistoryRepository.findOne({
+      where: {
+        userId: user.id,
+        userBirthDateId: userBirthDate.id,
+        date: today,
+      },
+    });
 
-    const userId = user.id;
-    this.logger.debug(
-      `Generating new horoscope for user ${userId} (sign: ${sign}) for birth date: ${dateOfBirth.toISOString().split('T')[0]}`,
-    );
+    if (existingHoroscope) {
+      this.logger.debug(
+        `Found existing horoscope for user ${user.id} for today: ${today}`,
+      );
+      return existingHoroscope;
+    }
 
+    // Tạo horoscope mới cho ngày hôm nay
     const generatedHoroscope = await this.horoscopeGenerator.generateHoroscope({
       sign,
       dateOfBirth: dateOfBirth.toISOString().split('T')[0],
@@ -108,10 +104,10 @@ export class HoroscopeService {
     });
 
     const horoscopeHistory = new HoroscopeHistory();
-    horoscopeHistory.userId = userId;
+    horoscopeHistory.userId = user.id;
     horoscopeHistory.userBirthDateId = userBirthDate.id;
     horoscopeHistory.sign = generatedHoroscope.sign;
-    horoscopeHistory.date = generatedHoroscope.date;
+    horoscopeHistory.date = today;
     horoscopeHistory.scores = generatedHoroscope.scores;
     horoscopeHistory.overview = generatedHoroscope.overview;
     horoscopeHistory.loveAndRelationships =
@@ -123,7 +119,7 @@ export class HoroscopeService {
 
     await this.horoscopeHistoryRepository.save(horoscopeHistory);
     this.logger.log(
-      `Generated and saved horoscope for user ${userId} for birth date ${dateOfBirth.toISOString().split('T')[0]}`,
+      `Generated and saved horoscope for user ${user.id} for today ${today}`,
     );
     return horoscopeHistory;
   }
@@ -170,8 +166,9 @@ export class HoroscopeService {
 
     const dateOfBirth = new Date(user.dateOfBirth);
     const sign = this.zodiacService.calculateZodiacSign(dateOfBirth);
+    const today = new Date().toISOString().split('T')[0];
 
-    // Kiểm tra xem đã có horoscope cho ngày sinh này chưa
+    // Kiểm tra xem đã có user birth date chưa
     const existingBirthDate = await this.userBirthDateRepository.findOne({
       where: {
         userId: user.id,
@@ -179,37 +176,32 @@ export class HoroscopeService {
       },
     });
 
-    if (existingBirthDate) {
-      const existingHoroscope = await this.horoscopeHistoryRepository.findOne({
-        where: {
-          userId: user.id,
-          userBirthDateId: existingBirthDate.id,
-        },
-      });
-
-      if (existingHoroscope) {
-        this.logger.debug(
-          `Found existing horoscope for user ${user.id} with birth date: ${dateOfBirth.toISOString().split('T')[0]}`,
-        );
-        return existingHoroscope;
-      }
-    }
-
     // Tạo hoặc cập nhật user birth date
     const userBirthDate = existingBirthDate || new UserBirthDate();
     if (!existingBirthDate) {
       userBirthDate.userId = user.id;
+      userBirthDate.dateOfBirth = dateOfBirth;
+      userBirthDate.zodiacSign = sign;
+      await this.userBirthDateRepository.save(userBirthDate);
     }
 
-    userBirthDate.dateOfBirth = dateOfBirth;
-    userBirthDate.zodiacSign = sign;
-    await this.userBirthDateRepository.save(userBirthDate);
+    // Kiểm tra xem đã có horoscope cho ngày hôm nay chưa
+    const existingHoroscope = await this.horoscopeHistoryRepository.findOne({
+      where: {
+        userId: user.id,
+        userBirthDateId: userBirthDate.id,
+        date: today,
+      },
+    });
 
-    const userId = user.id;
-    this.logger.debug(
-      `Generating new horoscope for user ${userId} (sign: ${sign}) for birth date: ${dateOfBirth.toISOString().split('T')[0]}`,
-    );
+    if (existingHoroscope) {
+      this.logger.debug(
+        `Found existing horoscope for user ${user.id} for today: ${today}`,
+      );
+      return existingHoroscope;
+    }
 
+    // Tạo horoscope mới cho ngày hôm nay
     const generatedHoroscope = await this.horoscopeGenerator.generateHoroscope({
       sign,
       dateOfBirth: dateOfBirth.toISOString().split('T')[0],
@@ -217,10 +209,10 @@ export class HoroscopeService {
     });
 
     const horoscopeHistory = new HoroscopeHistory();
-    horoscopeHistory.userId = userId;
+    horoscopeHistory.userId = user.id;
     horoscopeHistory.userBirthDateId = userBirthDate.id;
     horoscopeHistory.sign = generatedHoroscope.sign;
-    horoscopeHistory.date = generatedHoroscope.date;
+    horoscopeHistory.date = today;
     horoscopeHistory.scores = generatedHoroscope.scores;
     horoscopeHistory.overview = generatedHoroscope.overview;
     horoscopeHistory.loveAndRelationships =
@@ -232,7 +224,7 @@ export class HoroscopeService {
 
     await this.horoscopeHistoryRepository.save(horoscopeHistory);
     this.logger.log(
-      `Generated and saved horoscope for user ${userId} for birth date ${dateOfBirth.toISOString().split('T')[0]}`,
+      `Generated and saved horoscope for user ${user.id} for today ${today}`,
     );
     return horoscopeHistory;
   }
