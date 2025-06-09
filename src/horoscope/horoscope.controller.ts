@@ -57,7 +57,7 @@ export class HoroscopeController {
     description: 'Unauthorized - Invalid or missing JWT token',
   })
   async getMyHoroscope(@Req() req: RequestWithUser): Promise<HoroscopeHistory> {
-    return this.horoscopeService.generateAndSaveHoroscopeForUser(req.user);
+    return this.horoscopeService.getHoroscope(req.user);
   }
 
   /**
@@ -84,7 +84,7 @@ export class HoroscopeController {
     @Req() req: RequestWithUser,
     @Body() generateHoroscopeDto: GenerateHoroscopeDto,
   ): Promise<HoroscopeHistory> {
-    return this.horoscopeService.generateAndSaveHoroscope(
+    return this.horoscopeService.getHoroscopeWithOtherBirthDate(
       req.user,
       generateHoroscopeDto,
     );

@@ -49,7 +49,85 @@ export class HoroscopeService {
     }
   }
 
-  async generateAndSaveHoroscope(
+  async getHoroscope(user: User): Promise<HoroscopeHistory> {
+    if (!user.dateOfBirth) {
+      throw new NotFoundException(
+        'User birth date not found. Please update your birth date in profile.',
+      );
+    }
+
+    if (!user.birthTime) {
+      throw new NotFoundException(
+        'User birth time not found. Please update your birth time in profile.',
+      );
+    }
+
+    const dateOfBirth = new Date(user.dateOfBirth);
+    const sign = this.zodiacService.calculateZodiacSign(dateOfBirth);
+    const today = new Date().toISOString().split('T')[0];
+
+    // Kiểm tra xem đã có user birth date chưa
+    const existingBirthDate = await this.userBirthDateRepository.findOne({
+      where: {
+        userId: user.id,
+        dateOfBirth: dateOfBirth,
+      },
+    });
+
+    // Tạo hoặc cập nhật user birth date
+    const userBirthDate = existingBirthDate || new UserBirthDate();
+    if (!existingBirthDate) {
+      userBirthDate.userId = user.id;
+      userBirthDate.dateOfBirth = dateOfBirth;
+      userBirthDate.zodiacSign = sign;
+      await this.userBirthDateRepository.save(userBirthDate);
+    }
+
+    // Kiểm tra xem đã có horoscope cho ngày hôm nay chưa
+    const existingHoroscope = await this.horoscopeHistoryRepository.findOne({
+      where: {
+        userId: user.id,
+        userBirthDateId: userBirthDate.id,
+        date: today,
+      },
+    });
+
+    if (existingHoroscope) {
+      this.logger.debug(
+        `Found existing horoscope for user ${user.id} for today: ${today}`,
+      );
+      return existingHoroscope;
+    }
+
+    // Tạo horoscope mới cho ngày hôm nay
+    const generatedHoroscope = await this.horoscopeGenerator.generateHoroscope({
+      sign,
+      dateOfBirth: dateOfBirth.toISOString().split('T')[0],
+      birthTime: user.birthTime,
+    });
+
+    const horoscopeHistory = new HoroscopeHistory();
+    horoscopeHistory.userId = user.id;
+    horoscopeHistory.userBirthDateId = userBirthDate.id;
+    horoscopeHistory.sign = generatedHoroscope.sign;
+    horoscopeHistory.date = today;
+    horoscopeHistory.scores = generatedHoroscope.scores;
+    horoscopeHistory.overview = generatedHoroscope.overview;
+    horoscopeHistory.loveAndRelationships =
+      generatedHoroscope.loveAndRelationships;
+    horoscopeHistory.careerAndStudies = generatedHoroscope.careerAndStudies;
+    horoscopeHistory.healthAndWellbeing = generatedHoroscope.healthAndWellbeing;
+    horoscopeHistory.moneyAndFinances = generatedHoroscope.moneyAndFinances;
+    horoscopeHistory.isSave = false;
+
+    await this.horoscopeHistoryRepository.save(horoscopeHistory);
+    this.logger.log(
+      `Generated and saved horoscope for user ${user.id} for today ${today}`,
+    );
+    return horoscopeHistory;
+  }
+
+  async getHoroscopeWithOtherBirthDate(
     user: User,
     generateHoroscopeDto: GenerateHoroscopeDto,
   ): Promise<HoroscopeHistory> {
@@ -149,83 +227,5 @@ export class HoroscopeService {
     });
     if (!horoscope) throw new NotFoundException('Horoscope with ID not found');
     return horoscope;
-  }
-
-  async generateAndSaveHoroscopeForUser(user: User): Promise<HoroscopeHistory> {
-    if (!user.dateOfBirth) {
-      throw new NotFoundException(
-        'User birth date not found. Please update your birth date in profile.',
-      );
-    }
-
-    if (!user.birthTime) {
-      throw new NotFoundException(
-        'User birth time not found. Please update your birth time in profile.',
-      );
-    }
-
-    const dateOfBirth = new Date(user.dateOfBirth);
-    const sign = this.zodiacService.calculateZodiacSign(dateOfBirth);
-    const today = new Date().toISOString().split('T')[0];
-
-    // Kiểm tra xem đã có user birth date chưa
-    const existingBirthDate = await this.userBirthDateRepository.findOne({
-      where: {
-        userId: user.id,
-        dateOfBirth: dateOfBirth,
-      },
-    });
-
-    // Tạo hoặc cập nhật user birth date
-    const userBirthDate = existingBirthDate || new UserBirthDate();
-    if (!existingBirthDate) {
-      userBirthDate.userId = user.id;
-      userBirthDate.dateOfBirth = dateOfBirth;
-      userBirthDate.zodiacSign = sign;
-      await this.userBirthDateRepository.save(userBirthDate);
-    }
-
-    // Kiểm tra xem đã có horoscope cho ngày hôm nay chưa
-    const existingHoroscope = await this.horoscopeHistoryRepository.findOne({
-      where: {
-        userId: user.id,
-        userBirthDateId: userBirthDate.id,
-        date: today,
-      },
-    });
-
-    if (existingHoroscope) {
-      this.logger.debug(
-        `Found existing horoscope for user ${user.id} for today: ${today}`,
-      );
-      return existingHoroscope;
-    }
-
-    // Tạo horoscope mới cho ngày hôm nay
-    const generatedHoroscope = await this.horoscopeGenerator.generateHoroscope({
-      sign,
-      dateOfBirth: dateOfBirth.toISOString().split('T')[0],
-      birthTime: user.birthTime,
-    });
-
-    const horoscopeHistory = new HoroscopeHistory();
-    horoscopeHistory.userId = user.id;
-    horoscopeHistory.userBirthDateId = userBirthDate.id;
-    horoscopeHistory.sign = generatedHoroscope.sign;
-    horoscopeHistory.date = today;
-    horoscopeHistory.scores = generatedHoroscope.scores;
-    horoscopeHistory.overview = generatedHoroscope.overview;
-    horoscopeHistory.loveAndRelationships =
-      generatedHoroscope.loveAndRelationships;
-    horoscopeHistory.careerAndStudies = generatedHoroscope.careerAndStudies;
-    horoscopeHistory.healthAndWellbeing = generatedHoroscope.healthAndWellbeing;
-    horoscopeHistory.moneyAndFinances = generatedHoroscope.moneyAndFinances;
-    horoscopeHistory.isSave = false;
-
-    await this.horoscopeHistoryRepository.save(horoscopeHistory);
-    this.logger.log(
-      `Generated and saved horoscope for user ${user.id} for today ${today}`,
-    );
-    return horoscopeHistory;
   }
 }
