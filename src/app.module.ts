@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { HoroscopeModule } from './horoscope/horoscope.module';
 import { LLMModule } from './llm/llm.module';
 import { LocationModule } from './location/location.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { LocationModule } from './location/location.module';
     HoroscopeModule,
     LocationModule,
     LLMModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

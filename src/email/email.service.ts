@@ -19,8 +19,8 @@ export class EmailService {
   }
 
   async sendPasswordResetEmail(email: string, resetToken: string) {
-    // const resetUrl = `${this.configService.get('APP_URL')}/reset-password?token=${resetToken}`;
-    const resetUrl = `${this.configService.get('FRONTEND_URL')}/reset-password?token=${resetToken}`;
+    // Universal/App Links in here
+    const resetUrl = `${this.configService.get('FRONTEND_URL')}/v1/email/deep-redirect?token=${resetToken}`;
 
     console.log(resetUrl);
     const mailOptions = {
