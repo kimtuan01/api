@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { ZodiacSign } from './zodiac-sign.enum';
 import { ApiProperty } from '@nestjs/swagger';
+import { UserPremium } from './user-premium.enum';
 
 /**
  * User entity representing application users
@@ -136,6 +137,15 @@ export class User {
   onboardingCompleted: boolean;
 
   @ApiProperty({
+    description: 'User premium status',
+    enum: UserPremium,
+    enumName: 'UserPremium',
+    default: UserPremium.NONE,
+  })
+  @Column({ type: 'enum', enum: UserPremium, default: UserPremium.NONE })
+  isPremium: UserPremium;
+
+  @ApiProperty({
     description: 'Timestamp when the user was created',
     type: Date,
   })
@@ -155,7 +165,7 @@ export class User {
     required: false,
     nullable: true,
   })
-  @Column({ nullable: true })
+  @Column({ select: false, nullable: true })
   resetToken: string;
 
   @ApiProperty({
@@ -164,6 +174,6 @@ export class User {
     required: false,
     nullable: true,
   })
-  @Column({ nullable: true })
+  @Column({ select: false, nullable: true })
   resetTokenExpires: Date;
 }

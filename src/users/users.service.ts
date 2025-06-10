@@ -19,6 +19,7 @@ import { ZodiacSign } from './entities/zodiac-sign.enum';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from '../email/email.service';
+import { UpdatePremiumDto } from './dto/update-premium.dto';
 
 interface RegisterUserDto {
   email: string;
@@ -466,5 +467,17 @@ export class UsersService {
     return {
       message: 'Password has been reset successfully',
     };
+  }
+
+  async updatePremium(userId: string, updatePremiumDto: UpdatePremiumDto) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.isPremium = updatePremiumDto.isPremium;
+    await this.usersRepository.save(user);
+
+    return user;
   }
 }

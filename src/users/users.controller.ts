@@ -19,6 +19,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdatePremiumDto } from './dto/update-premium.dto';
 
 @ApiTags('Users')
 @Controller({
@@ -69,5 +70,18 @@ export class UsersController {
   @Post('reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.usersService.resetPassword(resetPasswordDto);
+  }
+
+  @ApiOperation({ summary: 'Update user premium status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Premium status updated successfully',
+  })
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @Patch('premium')
+  async updatePremium(@Body() updatePremiumDto: UpdatePremiumDto, @Req() req) {
+    const userId = req.user.id;
+    return this.usersService.updatePremium(userId, updatePremiumDto);
   }
 }
